@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { ShieldCheck, LogOut } from "lucide-react";
+import { LogOut } from "lucide-react";
+import { BrandLogo } from "@/components/brand-logo";
 import { requireUser } from "@/lib/auth/current-user";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -33,12 +34,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <div className="flex min-h-screen">
       <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r border-sidebar-border bg-sidebar px-4 py-6 md:flex">
-        <Link
-          href={homeHref}
-          className="flex items-center gap-2 px-2 font-semibold tracking-tight text-sidebar-foreground"
-        >
-          <ShieldCheck className="size-5.5 text-primary" />
-          Aprovação SGQ
+        <Link href={homeHref} className="flex items-center px-2 text-sidebar-foreground">
+          <BrandLogo className="h-6" />
         </Link>
 
         <div className="mt-8 flex-1">
@@ -60,8 +57,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <header className="sticky top-0 z-40 border-b bg-background/85 backdrop-blur-sm">
           <div className="flex items-center justify-between gap-4 px-4 py-3 md:justify-end md:px-8">
             <div className="flex items-center gap-6 md:hidden">
-              <Link href={homeHref} className="flex items-center gap-2 font-semibold tracking-tight">
-                <ShieldCheck className="size-5 text-primary" />
+              <Link href={homeHref} className="flex items-center text-foreground">
+                <BrandLogo className="h-5" />
               </Link>
               <AppNav isAdmin={isAdmin} />
             </div>

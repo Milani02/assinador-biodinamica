@@ -22,7 +22,7 @@ const sora = Sora({
 });
 
 export const metadata: Metadata = {
-  title: "Aprovação Eletrônica SGQ",
+  title: "Biodinâmica",
   description: "Controle interno de aprovação de documentos do SGQ",
 };
 
