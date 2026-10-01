@@ -56,9 +56,9 @@ services:
       NEXT_PRIVATE_SMTP_FROM_NAME: "Assinaturas SGQ"
       NEXT_PRIVATE_SMTP_FROM_ADDRESS: ${SMTP_FROM_ADDRESS}
 
-      # Segurança: fecha cadastro público (só admin cria contas)
-      # ⚠️ Deixe "false" só até criar a 1ª conta admin, depois volte para "true"
-      NEXT_PUBLIC_DISABLE_SIGNUP: "false"
+      # Segurança: cadastro público FECHADO (só admin cria contas).
+      # Admin já criado -> mantido "true". Para reabrir o cadastro, volte p/ "false".
+      NEXT_PUBLIC_DISABLE_SIGNUP: "true"
     expose:
       - "3000"
 
