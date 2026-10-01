@@ -1,5 +1,6 @@
 "use server";
 
+import { after } from "next/server";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db/client";
 import { profiles } from "@/lib/db/schema";
@@ -37,16 +38,19 @@ export async function loginAction(
     return { error: "Usuário inativo ou não cadastrado." };
   }
 
-  await recordAudit({
-    entityType: "user",
-    entityId: data.user.id,
-    action: "login",
-    actorId: data.user.id,
+  const userId = data.user.id;
+  const mustChangePassword = Boolean(data.user.user_metadata?.must_change_password);
+
+  // Auditoria FORA do caminho crítico: não segura a resposta do login.
+  after(async () => {
+    try {
+      await recordAudit({ entityType: "user", entityId: userId, action: "login", actorId: userId });
+    } catch {
+      // auditoria é best-effort aqui; não deve bloquear/derrubar o login
+    }
   });
 
-  const mustChangePassword = Boolean(data.user.user_metadata?.must_change_password);
-  // Em vez de redirect() no servidor (navegacao "soft" que renderiza o destino
-  // com o cookie antigo -> painel vazio, so o F5 resolve), devolvemos o destino
-  // e o cliente faz um reload completo, ja com a sessao gravada.
+  // Devolve o destino; o cliente navega (soft) + router.refresh() para renderizar
+  // já com a sessão recém-criada (sem o painel vazio que exigia F5).
   return { redirectTo: mustChangePassword ? "/trocar-senha" : "/" };
 }
