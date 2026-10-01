@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { requireUser } from "@/lib/auth/current-user";
 import { recordAudit } from "@/lib/audit";
@@ -48,5 +49,6 @@ export async function changePasswordAction(
     actorId: user.id,
   });
 
+  revalidatePath("/", "layout");
   redirect("/");
 }

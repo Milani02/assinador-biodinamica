@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db/client";
 import { profiles } from "@/lib/db/schema";
@@ -46,5 +47,8 @@ export async function loginAction(
   });
 
   const mustChangePassword = Boolean(data.user.user_metadata?.must_change_password);
+  // Invalida o cache do App Router para que o painel/abas rendam JÁ com a sessão
+  // recém-criada (sem isto o 1o carregamento vem vazio e só o F5 resolve).
+  revalidatePath("/", "layout");
   redirect(mustChangePassword ? "/trocar-senha" : "/");
 }
