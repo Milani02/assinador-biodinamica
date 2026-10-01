@@ -106,7 +106,7 @@ export default function LoginPage() {
                 required
                 autoFocus
                 placeholder="seu@email.com"
-                className="h-[58px] rounded-xl border border-[#acacae] bg-[#fafafa] px-4 text-[16px] text-[#141414] outline-none placeholder:text-[#606060] focus-visible:border-[#2b6cb0] focus-visible:ring-2 focus-visible:ring-[#2b6cb0]/40 lg:text-[15px]"
+                className="h-[58px] rounded-xl border border-[#acacae] bg-[#fafafa] px-4 text-[16px] text-[#141414] outline-none placeholder:text-[#606060] focus-visible:border-[#283139] focus-visible:ring-2 focus-visible:ring-[#283139]/40 lg:text-[15px]"
               />
 
               <label htmlFor="password" className="sr-only">
@@ -119,7 +119,7 @@ export default function LoginPage() {
                 autoComplete="current-password"
                 required
                 placeholder="Senha"
-                className="h-[58px] rounded-xl border border-[#e3e3e5] bg-[#f6f6f7] px-4 text-[16px] text-[#141414] outline-none placeholder:text-[#606060] focus-visible:border-[#2b6cb0] focus-visible:ring-2 focus-visible:ring-[#2b6cb0]/40"
+                className="h-[58px] rounded-xl border border-[#e3e3e5] bg-[#f6f6f7] px-4 text-[16px] text-[#141414] outline-none placeholder:text-[#606060] focus-visible:border-[#283139] focus-visible:ring-2 focus-visible:ring-[#283139]/40"
               />
 
               {state.error && (
