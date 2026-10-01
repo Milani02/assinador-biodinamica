@@ -1,0 +1,17 @@
+node_modules
+.next
+.git
+.github
+.claude
+.env*
+npm-debug.log*
+*.md
+Dockerfile
+.dockerignore
+documenso-coolify
+pessoa assinando.mp4
+exemnpo.png
+public/login-preview.html
+drizzle/meta
+.vscode
+.idea

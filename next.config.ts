@@ -1,6 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Build enxuto para container (Docker/Coolify): gera .next/standalone com só
+  // o necessário para rodar `node server.js`.
+  output: "standalone",
   // Permite acessar o servidor de desenvolvimento pela rede interna (IP da LAN),
   // não só por localhost. O Next.js bloqueia origens externas em dev por padrão.
   // Cada "*" cobre um octeto do IP; ajuste se a sua sub-rede for diferente.
