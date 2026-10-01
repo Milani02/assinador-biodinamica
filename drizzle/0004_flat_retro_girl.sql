@@ -1,0 +1,1 @@
+ALTER TABLE "profiles" ADD COLUMN "assinatura_imagem" text;

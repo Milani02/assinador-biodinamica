@@ -36,6 +36,24 @@ yarn-error.log*
 # vercel
 .vercel
 
+# uploads locais (produção usa volume do Coolify)
+/uploads
+
+# assinaturas das pessoas (PII — nunca commitar)
+/assinaturas
+/não conformidade
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# config local do agente / Claude Code
+.claude/
+
+# SEGREDOS do deploy do Documenso (senha do Postgres, NEXTAUTH_SECRET) — nunca commitar
+/documenso-coolify/segredos-documenso.txt
+*segredos*.txt
+
+# fontes de midia (os arquivos otimizados ficam em /public)
+/pessoa assinando.mp4
+/exemnpo.png

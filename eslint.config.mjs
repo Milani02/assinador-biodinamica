@@ -12,7 +12,20 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Static assets served as-is (ex.: worker do pdfjs-dist) — nunca são código-fonte nosso.
+    "public/**",
   ]),
+  {
+    rules: {
+      // Argumentos exigidos por assinaturas de callback (ex.: `_prevState`,
+      // `_formData` do useActionState) e variáveis prefixadas com `_` são
+      // marcados como intencionalmente não usados.
+      "@typescript-eslint/no-unused-vars": [
+        "warn",
+        { argsIgnorePattern: "^_", varsIgnorePattern: "^_", caughtErrorsIgnorePattern: "^_" },
+      ],
+    },
+  },
 ]);
 
 export default eslintConfig;

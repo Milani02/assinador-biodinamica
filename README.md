@@ -1,36 +1,87 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Aprovação Eletrônica SGQ
 
-## Getting Started
+Ferramenta interna de aprovação eletrônica de documentos do SGQ — substitui a
+assinatura escaneada por um fluxo rastreável: conta individual por aprovador
+(Supabase Auth), decisão registrada com hash do arquivo, protocolo de aprovação
+em PDF gerado automaticamente, e trilha de auditoria com cadeia de hash (não
+pode ser alterada retroativamente sem deixar evidência).
 
-First, run the development server:
+Contexto completo da decisão de arquitetura em `docs/assinatura Eletronica - manual.docx`.
 
-```bash
+## Arquitetura
+
+- **App**: Next.js, roda no servidor corporativo (Windows), acessado só pela
+  rede interna via `http://IP-DO-SERVIDOR:PORTA` (sem HTTPS).
+- **Autenticação**: Supabase Auth — cada aprovador tem conta própria.
+- **Arquivos** (PDFs originais e protocolos de aprovação): Supabase Storage,
+  em buckets privados (`documentos` e `protocolos`), acessados por URL assinada
+  de curta duração.
+- **Banco relacional** (documentos, revisões, aprovações, trilha de auditoria):
+  Postgres do próprio Supabase, via Drizzle ORM.
+
+## Configurando o projeto Supabase (uma vez)
+
+1. Crie o projeto em supabase.com.
+2. Em **Storage**, crie dois buckets **privados**: `documentos` e `protocolos`
+   (desmarque "Public bucket").
+3. Em **Project Settings → API**, copie a **Project URL**, a **anon public key**
+   e a **service_role key** (secreta).
+4. Em **Project Settings → Database**, copie a **Connection string** (Session
+   pooler, porta 6543, ou a conexão direta).
+5. Copie `.env.example` para `.env.local` e preencha com os valores acima.
+
+## Rodando localmente
+
+```
+npm install
+npm run db:migrate
+npm run seed -- --nome="Seu Nome" --email="voce@empresa.com"
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+O `seed` cria o primeiro administrador (via Supabase Auth) e mostra a senha
+temporária — ela precisa ser trocada no primeiro login. Acesse
+http://localhost:3000/login.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Deploy no servidor corporativo (Windows, rede interna)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+1. Copie o projeto para o servidor, com o `.env.local` (ou variáveis de
+   ambiente do sistema) apontando para o Supabase de produção.
+2. Rode uma vez:
+   ```
+   npm install
+   npm run build
+   npm run db:migrate
+   npm run seed -- --nome="..." --email="..."
+   ```
+3. Suba como **serviço do Windows** com o [NSSM](https://nssm.cc/) (não exige
+   instalação, é um único `.exe`):
+   ```
+   nssm install AprovacaoSGQ "C:\Program Files\nodejs\node.exe" "node_modules\next\dist\bin\next start -p 3000"
+   nssm set AprovacaoSGQ AppDirectory "C:\caminho\para\o\projeto"
+   nssm set AprovacaoSGQ AppEnvironmentExtra DATABASE_URL=... NEXT_PUBLIC_SUPABASE_URL=... NEXT_PUBLIC_SUPABASE_ANON_KEY=... SUPABASE_SERVICE_ROLE_KEY=...
+   nssm start AprovacaoSGQ
+   ```
+   Isso mantém o processo rodando e reinicia sozinho se cair ou se o servidor
+   reiniciar. Acesse por `http://IP-DO-SERVIDOR:3000`.
+4. Depois de qualquer atualização do código: `npm run build`, rode
+   `npm run db:migrate` se o schema mudou, e `nssm restart AprovacaoSGQ`.
 
-## Learn More
+## O que ainda falta para ficar defensável em auditoria (fora do escopo desta entrega)
 
-To learn more about Next.js, take a look at the following resources:
+- Protocolo simples de validação do sistema (evidência de que foi testado).
+- Política de backup/retenção do Supabase (Postgres + Storage).
+- Atualizar a IT 4.01-01 / MP4.01 descrevendo este sistema como o mecanismo de
+  aprovação eletrônica oficial.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Riscos conhecidos por usar Supabase (decisão do usuário)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- O acesso interno (HTTP, sem certificado) e o banco/auth/storage ficarem num
+  serviço de nuvem de terceiros (mesmo que gratuito) é uma divergência do
+  desenho original — que priorizava manter tudo interno para fortalecer a
+  defesa perante a VISA/ANVISA na NC 06. Registrado aqui para referência futura.
+- No plano free do Supabase, o projeto pode pausar após alguns dias de
+  inatividade, derrubando o sistema sem aviso — risco aceito explicitamente.
+- O convite "middleware" do Next.js está com aviso de depreciação (Next 16
+  recomenda migrar para "proxy"); funciona normalmente, mas vale acompanhar em
+  futuras atualizações do framework.

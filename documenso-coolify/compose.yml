@@ -1,0 +1,66 @@
+# Documenso self-hosted para Coolify (Hostinger VPS)
+# Cole este conteúdo no editor de Docker Compose do Coolify.
+# Os valores ${...} o Coolify vai pedir pra você preencher (ver lista no README).
+
+services:
+  documenso-db:
+    image: postgres:15
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: documenso
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: documenso
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U documenso -d documenso"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - documenso-db:/var/lib/postgresql/data
+
+  documenso:
+    image: documenso/documenso:latest
+    restart: unless-stopped
+    depends_on:
+      documenso-db:
+        condition: service_healthy
+    environment:
+      PORT: 3000
+      # URL pública (o Coolify preenche via domínio). Ex: https://documenso.seudominio.com
+      NEXT_PUBLIC_WEBAPP_URL: ${NEXT_PUBLIC_WEBAPP_URL}
+      NEXT_PRIVATE_INTERNAL_WEBAPP_URL: http://documenso:3000
+
+      # Banco de dados (usa o Postgres acima)
+      NEXT_PRIVATE_DATABASE_URL: postgres://documenso:${POSTGRES_PASSWORD}@documenso-db:5432/documenso
+      NEXT_PRIVATE_DIRECT_DATABASE_URL: postgres://documenso:${POSTGRES_PASSWORD}@documenso-db:5432/documenso
+
+      # Segredos (gere com openssl rand -base64 32)
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
+      NEXT_PRIVATE_ENCRYPTION_KEY: ${NEXT_PRIVATE_ENCRYPTION_KEY}
+      NEXT_PRIVATE_ENCRYPTION_SECONDARY_KEY: ${NEXT_PRIVATE_ENCRYPTION_SECONDARY_KEY}
+
+      # Guarda os PDFs no próprio banco (não precisa de S3/MinIO)
+      NEXT_PUBLIC_UPLOAD_TRANSPORT: database
+
+      # Certificado da EMPRESA que sela os PDFs (base64 do .p12 — não é CPF de ninguém)
+      NEXT_PRIVATE_SIGNING_TRANSPORT: local
+      NEXT_PRIVATE_SIGNING_LOCAL_FILE_CONTENTS: ${SIGNING_CERT_BASE64}
+      NEXT_PRIVATE_SIGNING_PASSPHRASE: ${SIGNING_PASSPHRASE}
+
+      # E-mail (SMTP)
+      NEXT_PRIVATE_SMTP_TRANSPORT: smtp-auth
+      NEXT_PRIVATE_SMTP_HOST: ${SMTP_HOST}
+      NEXT_PRIVATE_SMTP_PORT: ${SMTP_PORT}
+      NEXT_PRIVATE_SMTP_USERNAME: ${SMTP_USERNAME}
+      NEXT_PRIVATE_SMTP_PASSWORD: ${SMTP_PASSWORD}
+      NEXT_PRIVATE_SMTP_FROM_NAME: "Assinaturas SGQ"
+      NEXT_PRIVATE_SMTP_FROM_ADDRESS: ${SMTP_FROM_ADDRESS}
+
+      # Segurança: fecha cadastro público (só admin cria contas)
+      # ⚠️ Deixe "false" só até criar a 1ª conta admin, depois volte para "true"
+      NEXT_PUBLIC_DISABLE_SIGNUP: "false"
+    expose:
+      - "3000"
+
+volumes:
+  documenso-db:
