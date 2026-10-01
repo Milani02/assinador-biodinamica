@@ -33,6 +33,14 @@ export default function LoginPage() {
     };
   }, []);
 
+  // Login OK: reload completo no destino. Garante que o painel renderize JA com
+  // a sessao (evita a tela vazia que so o F5 resolvia).
+  useEffect(() => {
+    if (state.redirectTo) window.location.href = state.redirectTo;
+  }, [state.redirectTo]);
+
+  const busy = pending || Boolean(state.redirectTo);
+
   return (
     // Tela de marca: sempre clara (não inverte no dark mode do resto do app).
     <main className="relative flex min-h-[100svh] w-full flex-col overflow-x-hidden bg-[#fefefe] text-[#141414] lg:grid lg:grid-cols-[1.33fr_1fr] lg:overflow-hidden">
@@ -115,11 +123,11 @@ export default function LoginPage() {
 
               <button
                 type="submit"
-                disabled={pending}
+                disabled={busy}
                 className="group mt-2 flex h-[60px] items-center justify-center gap-2.5 rounded-full bg-gradient-to-b from-[#283139] to-[#293340] text-[16px] font-medium text-white shadow-[0_8px_20px_rgba(18,26,34,0.16),0_2px_5px_rgba(18,26,34,0.10)] transition-[filter,transform] duration-200 hover:brightness-110 active:translate-y-px disabled:cursor-not-allowed disabled:opacity-70"
               >
-                {pending ? "Entrando..." : "Entrar"}
-                {!pending && (
+                {busy ? "Entrando..." : "Entrar"}
+                {!busy && (
                   <ArrowRight
                     className="size-[18px] transition-transform group-hover:translate-x-0.5"
                     strokeWidth={2.6}

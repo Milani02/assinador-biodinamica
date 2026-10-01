@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect } from "react";
 import { KeyRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +13,12 @@ const initialState: ChangePasswordState = {};
 
 export default function TrocarSenhaPage() {
   const [state, formAction, pending] = useActionState(changePasswordAction, initialState);
+
+  useEffect(() => {
+    if (state.redirectTo) window.location.href = state.redirectTo;
+  }, [state.redirectTo]);
+
+  const busy = pending || Boolean(state.redirectTo);
 
   return (
     <AuthShell>
@@ -41,8 +47,8 @@ export default function TrocarSenhaPage() {
               <Input id="confirmar" name="confirmar" type="password" minLength={8} required />
             </div>
             {state.error && <p className="text-sm text-destructive">{state.error}</p>}
-            <Button type="submit" className="w-full" disabled={pending}>
-              {pending ? "Salvando..." : "Salvar e continuar"}
+            <Button type="submit" className="w-full" disabled={busy}>
+              {busy ? "Salvando..." : "Salvar e continuar"}
             </Button>
           </form>
         </CardContent>

@@ -1,12 +1,10 @@
 "use server";
 
-import { redirect } from "next/navigation";
-import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { requireUser } from "@/lib/auth/current-user";
 import { recordAudit } from "@/lib/audit";
 
-export type ChangePasswordState = { error?: string };
+export type ChangePasswordState = { error?: string; redirectTo?: string };
 
 export async function changePasswordAction(
   _prevState: ChangePasswordState,
@@ -49,6 +47,6 @@ export async function changePasswordAction(
     actorId: user.id,
   });
 
-  revalidatePath("/", "layout");
-  redirect("/");
+  // Reload completo no cliente (ver nota no loginAction) em vez de redirect().
+  return { redirectTo: "/" };
 }

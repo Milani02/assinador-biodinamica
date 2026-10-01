@@ -1,14 +1,12 @@
 "use server";
 
-import { redirect } from "next/navigation";
-import { revalidatePath } from "next/cache";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db/client";
 import { profiles } from "@/lib/db/schema";
 import { createClient } from "@/lib/supabase/server";
 import { recordAudit } from "@/lib/audit";
 
-export type LoginState = { error?: string };
+export type LoginState = { error?: string; redirectTo?: string };
 
 export async function loginAction(
   _prevState: LoginState,
@@ -47,8 +45,8 @@ export async function loginAction(
   });
 
   const mustChangePassword = Boolean(data.user.user_metadata?.must_change_password);
-  // Invalida o cache do App Router para que o painel/abas rendam JÁ com a sessão
-  // recém-criada (sem isto o 1o carregamento vem vazio e só o F5 resolve).
-  revalidatePath("/", "layout");
-  redirect(mustChangePassword ? "/trocar-senha" : "/");
+  // Em vez de redirect() no servidor (navegacao "soft" que renderiza o destino
+  // com o cookie antigo -> painel vazio, so o F5 resolve), devolvemos o destino
+  // e o cliente faz um reload completo, ja com a sessao gravada.
+  return { redirectTo: mustChangePassword ? "/trocar-senha" : "/" };
 }
