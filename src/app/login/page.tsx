@@ -1,7 +1,6 @@
 "use client";
 
 import { useActionState, useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
 import { ArrowRight } from "lucide-react";
 import { BrandLogo } from "@/components/brand-logo";
 import { loginAction, type LoginState } from "./actions";
@@ -10,7 +9,6 @@ const initialState: LoginState = {};
 
 export default function LoginPage() {
   const [state, formAction, pending] = useActionState(loginAction, initialState);
-  const router = useRouter();
   const videoRef = useRef<HTMLVideoElement>(null);
 
   // O React nem sempre aplica o atributo `muted` no DOM no 1o render, e o
@@ -35,14 +33,11 @@ export default function LoginPage() {
     };
   }, []);
 
-  // Login OK: navega (soft -> mostra o skeleton na hora) e força o refetch dos
-  // Server Components com a sessão nova (router.refresh), evitando o painel vazio.
+  // Login OK: reload completo no destino. Requisição nova já com a sessão ->
+  // a página renderiza de primeira (sem a tela em branco que exigia F5).
   useEffect(() => {
-    if (state.redirectTo) {
-      router.replace(state.redirectTo);
-      router.refresh();
-    }
-  }, [state.redirectTo, router]);
+    if (state.redirectTo) window.location.href = state.redirectTo;
+  }, [state.redirectTo]);
 
   const busy = pending || Boolean(state.redirectTo);
 

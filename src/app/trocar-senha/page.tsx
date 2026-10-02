@@ -1,7 +1,6 @@
 "use client";
 
 import { useActionState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { KeyRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,14 +13,10 @@ const initialState: ChangePasswordState = {};
 
 export default function TrocarSenhaPage() {
   const [state, formAction, pending] = useActionState(changePasswordAction, initialState);
-  const router = useRouter();
 
   useEffect(() => {
-    if (state.redirectTo) {
-      router.replace(state.redirectTo);
-      router.refresh();
-    }
-  }, [state.redirectTo, router]);
+    if (state.redirectTo) window.location.href = state.redirectTo;
+  }, [state.redirectTo]);
 
   const busy = pending || Boolean(state.redirectTo);
 

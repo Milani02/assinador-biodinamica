@@ -50,7 +50,13 @@ export async function loginAction(
     }
   });
 
-  // Devolve o destino; o cliente navega (soft) + router.refresh() para renderizar
-  // já com a sessão recém-criada (sem o painel vazio que exigia F5).
-  return { redirectTo: mustChangePassword ? "/trocar-senha" : "/" };
+  // Destino já conforme o papel: evita a cadeia "/" -> "/assinar" (307) para quem
+  // não é admin. O cliente faz um reload completo (window.location) neste destino,
+  // garantindo requisição nova com a sessão -> renderiza de primeira (sem F5).
+  const destino = mustChangePassword
+    ? "/trocar-senha"
+    : profile.role === "admin"
+      ? "/"
+      : "/assinar";
+  return { redirectTo: destino };
 }
