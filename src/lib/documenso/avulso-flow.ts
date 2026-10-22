@@ -2,6 +2,7 @@ import { and, asc, eq } from "drizzle-orm";
 import { db } from "@/lib/db/client";
 import { avulsos, avulsoSignatarios } from "@/lib/db/schema";
 import { recordAudit } from "@/lib/audit";
+import { origemDaRequisicao } from "@/lib/requisicao";
 import { createEnvelope, distributeEnvelope } from "./client";
 
 export interface SignatarioAvulso {
@@ -156,7 +157,13 @@ export async function registrarAssinaturaAvulsaPorSigner(
     entityId: sig.id,
     action: "assinar_avulso",
     actorId: signerId,
-    metadata: { avulsoId, ordem: sig.ordem, origem },
+    metadata: {
+      avulsoId,
+      ordem: sig.ordem,
+      origem,
+      // Só a assinatura feita pelo usuário traz IP; o webhook vem do Documenso.
+      ...(origem === "usuario" ? await origemDaRequisicao() : {}),
+    },
   });
 
   await finalizarSeCompleto(avulsoId);

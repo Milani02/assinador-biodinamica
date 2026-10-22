@@ -2,6 +2,8 @@
 // Referência: /api/v2, header `Authorization: <token>` (sem prefixo "Bearer").
 // Endpoints confirmados no código-fonte oficial (packages/trpc/server/envelope-router).
 
+import { origemDaRequisicao } from "@/lib/requisicao";
+
 const BASE_URL = process.env.DOCUMENSO_API_URL; // ex: https://digital.biodinamica.com.br/api/v2
 const API_TOKEN = process.env.DOCUMENSO_API_TOKEN;
 
@@ -313,9 +315,16 @@ function documensoHost(): string {
 }
 
 async function trpcMutation(path: string, input: unknown): Promise<unknown> {
+  // Quem chama o Documenso é este servidor; repassa IP e navegador do usuário
+  // para que o certificado de assinatura não registre o IP interno do Docker.
+  const { ip, userAgent } = await origemDaRequisicao();
   const res = await fetch(`${documensoHost()}/api/trpc/${path}`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      ...(ip ? { "x-forwarded-for": ip } : {}),
+      ...(userAgent ? { "user-agent": userAgent } : {}),
+    },
     // Transporte tRPC + superjson: corpo { "json": <input> }.
     body: JSON.stringify({ json: input }),
   });

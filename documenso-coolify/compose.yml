@@ -19,13 +19,17 @@ services:
       - documenso-db:/var/lib/postgresql/data
 
   documenso:
-    image: documenso/documenso:latest
+    # Versão FIXA (validada no FB7.21-20). O Assinador usa chamadas tRPC internas
+    # do Documenso; atualizar = controle de mudança + reteste da assinatura.
+    image: documenso/documenso:v2.18.0
     restart: unless-stopped
     depends_on:
       documenso-db:
         condition: service_healthy
     environment:
       PORT: 3000
+      # Horários do certificado de assinatura (página final do PDF) em Brasília.
+      TZ: America/Sao_Paulo
       # URL pública (o Coolify preenche via domínio). Ex: https://documenso.seudominio.com
       NEXT_PUBLIC_WEBAPP_URL: ${NEXT_PUBLIC_WEBAPP_URL}
       NEXT_PRIVATE_INTERNAL_WEBAPP_URL: http://documenso:3000
