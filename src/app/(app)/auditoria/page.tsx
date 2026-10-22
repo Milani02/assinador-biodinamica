@@ -22,6 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { AuditoriaAbas } from "./abas";
 import { buscarRegistrosAuditoria } from "./query";
 
 const papelLabel: Record<string, string> = {
@@ -58,12 +59,15 @@ export default async function AuditoriaPage({
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-semibold tracking-tight">Auditoria</h1>
-        <p className="mt-1 text-muted-foreground">
-          Registro de todas as assinaturas eletrônicas — evidência para auditorias internas
-          e externas (ex.: VISA/ANVISA).
-        </p>
+      <div className="space-y-4">
+        <div>
+          <h1 className="text-3xl font-semibold tracking-tight">Auditoria</h1>
+          <p className="mt-1 text-muted-foreground">
+            Registro de todas as assinaturas eletrônicas — evidência para auditorias internas
+            e externas (ex.: VISA/ANVISA).
+          </p>
+        </div>
+        <AuditoriaAbas ativa="/auditoria" />
       </div>
 
       <form

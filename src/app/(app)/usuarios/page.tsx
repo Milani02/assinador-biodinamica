@@ -82,7 +82,7 @@ export default async function UsuariosPage() {
                   </span>
                 </TableCell>
                 <TableCell className="text-right">
-                  <UserRowActions userId={u.id} ativo={u.ativo} />
+                  <UserRowActions userId={u.id} ativo={u.ativo} role={u.role} />
                 </TableCell>
               </TableRow>
             ))}

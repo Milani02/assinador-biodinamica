@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import { useRouter } from "next/navigation";
 import { KeyRound, Power, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,14 +17,28 @@ import {
   type ResetPasswordState,
   type ToggleUserState,
 } from "./actions";
+import { AlterarPerfilDialog } from "./alterar-perfil-dialog";
 
 const initialToggleState: ToggleUserState = {};
 const initialResetState: ResetPasswordState = {};
 
-export function UserRowActions({ userId, ativo }: { userId: string; ativo: boolean }) {
-  const toggleAction = toggleUserActiveAction.bind(null, userId, !ativo);
+export function UserRowActions({
+  userId,
+  ativo,
+  role,
+}: {
+  userId: string;
+  ativo: boolean;
+  role: string;
+}) {
+  const router = useRouter();
   const [toggleState, toggleFormAction, togglePending] = useActionState(
-    toggleAction,
+    async () => {
+      const resultado = await toggleUserActiveAction(userId, !ativo);
+      // Atualiza a lista na hora (antes o status só mudava ao recarregar a página).
+      if (!resultado.error) router.refresh();
+      return resultado;
+    },
     initialToggleState,
   );
 
@@ -37,6 +52,7 @@ export function UserRowActions({ userId, ativo }: { userId: string; ativo: boole
   return (
     <div className="flex flex-col items-end gap-1">
       <div className="flex justify-end gap-2">
+        <AlterarPerfilDialog userId={userId} role={role} />
         <Dialog open={resetOpen} onOpenChange={setResetOpen}>
           <DialogTrigger render={<Button variant="outline" size="sm" />}>
             <KeyRound className="size-3.5" />

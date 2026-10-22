@@ -79,6 +79,7 @@ export function NewUserDialog() {
                 defaultValue="aprovador"
                 items={[
                   { value: "aprovador", label: "Aprovador" },
+                  { value: "diretoria", label: "Diretoria" },
                   { value: "admin", label: "Administrador" },
                 ]}
               >
@@ -87,6 +88,7 @@ export function NewUserDialog() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="aprovador">Aprovador</SelectItem>
+                  <SelectItem value="diretoria">Diretoria</SelectItem>
                   <SelectItem value="admin">Administrador</SelectItem>
                 </SelectContent>
               </Select>

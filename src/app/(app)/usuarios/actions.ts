@@ -18,7 +18,7 @@ export async function createUserAction(
   const admin = await requireAdmin();
   const nome = String(formData.get("nome") || "").trim();
   const email = String(formData.get("email") || "").trim().toLowerCase();
-  const role = String(formData.get("role") || "aprovador") as "admin" | "aprovador";
+  const role = String(formData.get("role") || "aprovador") as "admin" | "aprovador" | "diretoria";
 
   if (!nome || !email) {
     return { error: "Preencha nome e e-mail." };
@@ -108,6 +108,44 @@ export async function toggleUserActiveAction(
   });
   revalidatePath("/usuarios");
   return {};
+}
+
+export type AlterarPerfilState = { error?: string; ok?: boolean };
+
+const PERFIS = ["aprovador", "diretoria", "admin"] as const;
+type Perfil = (typeof PERFIS)[number];
+
+export async function alterarPerfilAction(
+  userId: string,
+  _prevState: AlterarPerfilState,
+  formData: FormData,
+): Promise<AlterarPerfilState> {
+  const admin = await requireAdmin();
+  const novo = String(formData.get("role") || "") as Perfil;
+
+  if (!PERFIS.includes(novo)) {
+    return { error: "Perfil inválido." };
+  }
+  if (userId === admin.id) {
+    // Evita que o administrador tire o próprio acesso e fique sem ninguém para desfazer.
+    return { error: "Você não pode alterar o seu próprio perfil." };
+  }
+
+  const [profile] = await db.select().from(profiles).where(eq(profiles.id, userId)).limit(1);
+  if (!profile) return { error: "Usuário não encontrado." };
+  if (profile.role === novo) return { error: "O usuário já tem esse perfil." };
+
+  await db.update(profiles).set({ role: novo }).where(eq(profiles.id, userId));
+  await recordAudit({
+    entityType: "user",
+    entityId: userId,
+    action: "alterar_perfil",
+    actorId: admin.id,
+    metadata: { nome: profile.nome, email: profile.email, de: profile.role, para: novo },
+  });
+
+  revalidatePath("/usuarios");
+  return { ok: true };
 }
 
 export type ResetPasswordState = { error?: string; tempPassword?: string; email?: string };

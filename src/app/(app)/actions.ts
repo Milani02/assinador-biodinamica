@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { recordAudit } from "@/lib/audit";
+import { origemDaRequisicao } from "@/lib/requisicao";
 
 export async function logoutAction() {
   const supabase = await createClient();
@@ -16,6 +17,7 @@ export async function logoutAction() {
       entityId: user.id,
       action: "logout",
       actorId: user.id,
+      metadata: { ...(await origemDaRequisicao()) },
     });
   }
 

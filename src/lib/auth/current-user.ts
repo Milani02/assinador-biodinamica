@@ -27,6 +27,9 @@ export const getCurrentUser = cache(async () => {
 export async function requireUser() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
+  // Desativado com a sessão aberta: o acesso cai na próxima ação, sem esperar
+  // a sessão expirar.
+  if (!user.ativo) redirect("/sair");
   return user;
 }
 
