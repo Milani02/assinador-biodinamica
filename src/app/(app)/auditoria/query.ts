@@ -1,6 +1,7 @@
 import { and, desc, eq, gte, ilike, lte } from "drizzle-orm";
 import { db } from "@/lib/db/client";
 import { documentVersions, documents, profiles, signatures } from "@/lib/db/schema";
+import { fimDoDia, inicioDoDia } from "@/lib/datas";
 
 export interface AuditoriaFilters {
   codigo?: string;
@@ -17,12 +18,8 @@ export function buscarRegistrosAuditoria(filters: AuditoriaFilters) {
   if (filters.signatarioId) conditions.push(eq(signatures.signerId, filters.signatarioId));
   if (filters.papel) conditions.push(eq(signatures.papel, filters.papel));
   if (filters.decisao) conditions.push(eq(signatures.decisao, filters.decisao));
-  if (filters.de) conditions.push(gte(signatures.assinadoEm, new Date(filters.de)));
-  if (filters.ate) {
-    const end = new Date(filters.ate);
-    end.setHours(23, 59, 59, 999);
-    conditions.push(lte(signatures.assinadoEm, end));
-  }
+  if (filters.de) conditions.push(gte(signatures.assinadoEm, inicioDoDia(filters.de)));
+  if (filters.ate) conditions.push(lte(signatures.assinadoEm, fimDoDia(filters.ate)));
 
   return db
     .select({

@@ -1,4 +1,5 @@
 import { PDFDocument, StandardFonts, rgb, type PDFFont } from "pdf-lib";
+import { FUSO_SISTEMA } from "@/lib/datas";
 import { LOGO_BIODINAMICA_BRANCO_PNG_BASE64 } from "./logo-biodinamica";
 
 export interface ProtocoloAssinatura {
@@ -23,13 +24,20 @@ const PAGE_H = 841.89;
 const MARGIN = 50;
 const CONTENT_W = PAGE_W - MARGIN * 2;
 
-function pad(n: number) {
-  return String(n).padStart(2, "0");
-}
+const formatoProtocolo = new Intl.DateTimeFormat("pt-BR", {
+  timeZone: FUSO_SISTEMA,
+  day: "2-digit",
+  month: "2-digit",
+  year: "numeric",
+  hour: "2-digit",
+  minute: "2-digit",
+  hourCycle: "h23",
+});
 
-// Formata a data no padrão brasileiro sem depender de ICU/locale do servidor.
+// "22/10/2026 às 10:01" no horário de Brasília (o servidor roda em UTC).
 function fmtData(d: Date) {
-  return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} às ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  const p = Object.fromEntries(formatoProtocolo.formatToParts(d).map((x) => [x.type, x.value]));
+  return `${p.day}/${p.month}/${p.year} às ${p.hour}:${p.minute}`;
 }
 
 // Quebra o texto em linhas que cabem em maxWidth (com quebra dura para

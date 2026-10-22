@@ -3,6 +3,7 @@ import { and, asc, eq, or } from "drizzle-orm";
 import { CheckCircle2, ChevronRight } from "lucide-react";
 import { db } from "@/lib/db/client";
 import { documentVersions, documents } from "@/lib/db/schema";
+import { formatarDataHora } from "@/lib/datas";
 import { requireAdminArea } from "@/lib/auth/current-user";
 import {
   Table,
@@ -82,7 +83,7 @@ export default async function AprovacoesPage() {
                 <TableCell className="tabular-nums">{p.revisao}</TableCell>
                 <TableCell>{papelDoStatus[p.status] ?? "-"}</TableCell>
                 <TableCell className="tabular-nums text-muted-foreground">
-                  {new Date(p.enviadoEm).toLocaleString("pt-BR")}
+                  {formatarDataHora(p.enviadoEm)}
                 </TableCell>
                 <TableCell className="text-right">
                   <Button

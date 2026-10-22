@@ -3,6 +3,7 @@ import { asc, eq } from "drizzle-orm";
 import { CheckCircle2, Clock, FileDown, Lock } from "lucide-react";
 import { db } from "@/lib/db/client";
 import { avulsos, avulsoSignatarios, profiles } from "@/lib/db/schema";
+import { formatarDataHora } from "@/lib/datas";
 import { requireUser } from "@/lib/auth/current-user";
 import { getAvulsoSignedUrl } from "@/lib/files";
 import { getEnvelope } from "@/lib/documenso/client";
@@ -104,7 +105,7 @@ export default async function AssinarAvulsoPage({
   const token = minhaVez?.token ?? legadoToken ?? null;
   const assinado = avulso.status === "assinado";
 
-  const fmt = (d: Date | null) => (d ? new Date(d).toLocaleString("pt-BR") : "-");
+  const fmt = (d: Date | null) => (d ? formatarDataHora(d) : "-");
 
   return (
     <div className="space-y-6">

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth/current-user";
 import { recordAudit } from "@/lib/audit";
+import { formatarDataHora } from "@/lib/datas";
 import { buscarRegistrosAuditoria } from "../query";
 
 const papelLabel: Record<string, string> = {
@@ -54,7 +55,7 @@ export async function GET(request: Request) {
         papelLabel[r.papel] ?? r.papel,
         r.decisao,
         r.signatarioNome,
-        new Date(r.assinadoEm).toLocaleString("pt-BR"),
+        formatarDataHora(r.assinadoEm),
         r.comentario ?? "",
         r.sha256Hash,
       ]

@@ -3,6 +3,7 @@ import { asc, desc, eq, inArray } from "drizzle-orm";
 import { FileDown, FileSignature, History, ScrollText } from "lucide-react";
 import { db } from "@/lib/db/client";
 import { documentVersions, documents, profiles, signatures } from "@/lib/db/schema";
+import { formatarDataHora } from "@/lib/datas";
 import { requireAdminArea } from "@/lib/auth/current-user";
 import {
   Table,
@@ -204,7 +205,7 @@ export default async function DocumentoDetalhePage({
                           <TableCell className="font-medium">{nome}</TableCell>
                           <TableCell>{situacao}</TableCell>
                           <TableCell className="tabular-nums text-muted-foreground">
-                            {s ? new Date(s.assinadoEm).toLocaleString("pt-BR") : "-"}
+                            {s ? formatarDataHora(s.assinadoEm) : "-"}
                           </TableCell>
                         </TableRow>
                       );

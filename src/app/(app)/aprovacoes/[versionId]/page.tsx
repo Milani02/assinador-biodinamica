@@ -3,6 +3,7 @@ import { asc, eq } from "drizzle-orm";
 import { FileSearch } from "lucide-react";
 import { db } from "@/lib/db/client";
 import { documentVersions, documents, profiles, signatures } from "@/lib/db/schema";
+import { formatarDataHora } from "@/lib/datas";
 import { requireAdminArea } from "@/lib/auth/current-user";
 import { getDocumentoSignedUrl } from "@/lib/files";
 import { getEnvelope } from "@/lib/documenso/client";
@@ -134,7 +135,7 @@ export default async function AnalisarAprovacaoPage({
             {feitas.map((f, i) => (
               <li key={i}>
                 <span className="text-foreground">{papelLabel[f.papel] ?? f.papel}</span> por{" "}
-                {f.nome} · {new Date(f.assinadoEm).toLocaleString("pt-BR")}
+                {f.nome} · {formatarDataHora(f.assinadoEm)}
               </li>
             ))}
           </ul>

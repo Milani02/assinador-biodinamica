@@ -4,6 +4,7 @@ import { cn } from "cn";
 import { ChevronRight, FileDown, PenLine } from "lucide-react";
 import { db } from "@/lib/db/client";
 import { avulsos, avulsoSignatarios, profiles } from "@/lib/db/schema";
+import { formatarDataHora } from "@/lib/datas";
 import { requireUser } from "@/lib/auth/current-user";
 import { NovoAvulsoForm } from "./novo-avulso-form";
 
@@ -127,7 +128,7 @@ export default async function AssinarPage() {
                 <div className="min-w-0">
                   <p className="truncate font-medium">{a.titulo}</p>
                   <p className="text-xs text-muted-foreground">
-                    {new Date(a.criadoEm).toLocaleString("pt-BR")}
+                    {formatarDataHora(a.criadoEm)}
                   </p>
                 </div>
                 <AvulsoStatusBadge status={a.status} />
@@ -153,7 +154,7 @@ export default async function AssinarPage() {
                   <p className="text-xs text-muted-foreground">
                     Enviado por {a.uploaderNome}
                     {a.assinadoEm
-                      ? ` · assinado em ${new Date(a.assinadoEm).toLocaleString("pt-BR")}`
+                      ? ` · assinado em ${formatarDataHora(a.assinadoEm)}`
                       : ""}
                   </p>
                 </Link>

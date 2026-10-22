@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Download, ScrollText, SlidersHorizontal } from "lucide-react";
 import { db } from "@/lib/db/client";
 import { profiles } from "@/lib/db/schema";
+import { formatarDataHora } from "@/lib/datas";
 import { requireAdminArea } from "@/lib/auth/current-user";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -191,7 +192,7 @@ export default async function AuditoriaPage({
                 </TableCell>
                 <TableCell>{r.signatarioNome}</TableCell>
                 <TableCell className="tabular-nums text-muted-foreground">
-                  {new Date(r.assinadoEm).toLocaleString("pt-BR")}
+                  {formatarDataHora(r.assinadoEm)}
                 </TableCell>
                 <TableCell>
                   {r.protocoloPath && (
