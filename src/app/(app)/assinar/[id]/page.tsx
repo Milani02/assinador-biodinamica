@@ -5,6 +5,7 @@ import { db } from "@/lib/db/client";
 import { avulsos, avulsoSignatarios, profiles } from "@/lib/db/schema";
 import { formatarDataHora } from "@/lib/datas";
 import { requireUser } from "@/lib/auth/current-user";
+import { aplicarDataNoCarimbo } from "@/lib/assinatura/carimbo";
 import { getAvulsoSignedUrl } from "@/lib/files";
 import { getEnvelope } from "@/lib/documenso/client";
 import { AvulsoSignPanel } from "./sign-panel";
@@ -16,6 +17,10 @@ export default async function AssinarAvulsoPage({
 }) {
   const user = await requireUser();
   const { id } = await params;
+  // Prévia do marcador: carimbos com data dinâmica mostram a hora atual.
+  const minhaAssinatura = user.assinaturaImagem
+    ? await aplicarDataNoCarimbo(user.assinaturaImagem, new Date())
+    : null;
 
   const [avulso] = await db.select().from(avulsos).where(eq(avulsos.id, id)).limit(1);
   if (!avulso) notFound();
@@ -195,7 +200,7 @@ export default async function AssinarAvulsoPage({
           arquivoUrl={arquivoUrl}
           posicaoAtual={posicaoAtual}
           temAssinatura={Boolean(user.assinaturaImagem)}
-          minhaAssinatura={user.assinaturaImagem}
+          minhaAssinatura={minhaAssinatura}
           assinaturasAnteriores={assinaturasAnteriores}
         />
       ) : isSignatario ? (

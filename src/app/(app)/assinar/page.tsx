@@ -6,6 +6,7 @@ import { db } from "@/lib/db/client";
 import { avulsos, avulsoSignatarios, profiles } from "@/lib/db/schema";
 import { formatarDataHora } from "@/lib/datas";
 import { requireUser } from "@/lib/auth/current-user";
+import { aplicarDataNoCarimbo } from "@/lib/assinatura/carimbo";
 import { NovoAvulsoForm } from "./novo-avulso-form";
 
 function AvulsoStatusBadge({ status }: { status: string }) {
@@ -27,6 +28,10 @@ function AvulsoStatusBadge({ status }: { status: string }) {
 
 export default async function AssinarPage() {
   const user = await requireUser();
+  // Prévia do marcador: carimbos com data dinâmica mostram a hora atual.
+  const minhaAssinatura = user.assinaturaImagem
+    ? await aplicarDataNoCarimbo(user.assinaturaImagem, new Date())
+    : null;
 
   const [meusAvulsos, todasPessoas, minhasPendentes] = await Promise.all([
     db.select().from(avulsos).where(eq(avulsos.uploaderId, user.id)).orderBy(desc(avulsos.criadoEm)),
@@ -113,7 +118,7 @@ export default async function AssinarPage() {
         </div>
       )}
 
-      <NovoAvulsoForm pessoas={pessoas} minhaAssinatura={user.assinaturaImagem} />
+      <NovoAvulsoForm pessoas={pessoas} minhaAssinatura={minhaAssinatura} />
 
       {meusAvulsos.length > 0 && (
         <div className="space-y-3">

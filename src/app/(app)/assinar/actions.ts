@@ -20,6 +20,7 @@ import {
   completarAssinaturaDocumento,
   documentIdFromSecondary,
 } from "@/lib/documenso/client";
+import { aplicarDataNoCarimbo } from "@/lib/assinatura/carimbo";
 
 function clamp(n: number, min: number, max: number) {
   return Math.min(max, Math.max(min, n));
@@ -184,8 +185,9 @@ export async function criarAvulsoAction(
           ? envelope.fields.filter((f) => f.recipientId === rec.id && f.type === "SIGNATURE")
           : [];
         if (token0 && rec && campos.length) {
+          const imagem = await aplicarDataNoCarimbo(user.assinaturaImagem, new Date());
           for (const campo of campos) {
-            await assinarCampoComImagem(token0, campo.id, user.assinaturaImagem);
+            await assinarCampoComImagem(token0, campo.id, imagem);
           }
           await completarAssinaturaDocumento(
             token0,
@@ -324,8 +326,10 @@ export async function assinarAutomaticoAction(
       return { error: "Nenhum campo de assinatura encontrado para você." };
     }
 
+    // Carimbos com data dinâmica recebem a data/hora deste momento.
+    const imagem = await aplicarDataNoCarimbo(user.assinaturaImagem, new Date());
     for (const campo of campos) {
-      await assinarCampoComImagem(atual.documensoToken, campo.id, user.assinaturaImagem);
+      await assinarCampoComImagem(atual.documensoToken, campo.id, imagem);
     }
     await completarAssinaturaDocumento(
       atual.documensoToken,
