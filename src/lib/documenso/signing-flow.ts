@@ -189,6 +189,15 @@ async function avisarDiscord(
         ? { nome: await nomeDe(version.aprovadorId), etapa: papelLabel.aprovado }
         : undefined;
 
+  const assinaturas =
+    resultado === "vigente"
+      ? await db
+          .select({ papel: signatures.papel, nome: profiles.nome, em: signatures.assinadoEm })
+          .from(signatures)
+          .innerJoin(profiles, eq(profiles.id, signatures.signerId))
+          .where(eq(signatures.documentVersionId, version.id))
+      : [];
+
   await avisarAssinatura({
     resultado:
       resultado === "reprovado" ? "reprovado" : resultado === "vigente" ? "concluido" : "pendente",
@@ -198,5 +207,9 @@ async function avisarDiscord(
     proximo,
     progresso: { feitas: ordem.indexOf(papel) + 1, total: ordem.length },
     comentario,
+    assinaturas: ordem
+      .map((p) => assinaturas.find((a) => a.papel === p))
+      .filter((a): a is NonNullable<typeof a> => Boolean(a))
+      .map((a) => ({ nome: a.nome, etapa: papelLabel[a.papel as PapelAssinatura], em: a.em })),
   });
 }

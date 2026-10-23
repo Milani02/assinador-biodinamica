@@ -24,6 +24,8 @@ export interface AvisoAssinatura {
   /** Assinaturas feitas / total de assinaturas do fluxo. */
   progresso: { feitas: number; total: number };
   comentario?: string | null;
+  /** Quem assinou e quando, na ordem — usado no cartão de concluído. */
+  assinaturas?: { nome: string; etapa?: string; em: Date | null }[];
 }
 
 export async function avisarAssinatura(aviso: AvisoAssinatura): Promise<void> {
@@ -33,20 +35,34 @@ export async function avisarAssinatura(aviso: AvisoAssinatura): Promise<void> {
 function montarEmbed(a: AvisoAssinatura) {
   const titulo = {
     pendente: "✍️  Nova assinatura",
-    concluido: "✅  Documento concluído",
+    concluido: "🎉  Todas as assinaturas concluídas",
     reprovado: "❌  Documento reprovado",
   }[a.resultado];
 
   const comEtapa = (nome: string, etapa?: string) =>
     etapa ? `**${md(nome)}**\n${etapa}` : `**${md(nome)}**`;
 
-  const fields: { name: string; value: string; inline?: boolean }[] = [
-    {
+  const fields: { name: string; value: string; inline?: boolean }[] = [];
+  if (a.resultado === "concluido" && a.assinaturas?.length) {
+    fields.push({
+      name: "Assinaturas",
+      value: a.assinaturas
+        .map((x) => {
+          const partes = [`✅ **${md(x.nome)}**`];
+          if (x.etapa) partes.push(x.etapa);
+          if (x.em) partes.push(dataHora(x.em));
+          return partes.join("  ·  ");
+        })
+        .join("\n")
+        .slice(0, 1024),
+    });
+  } else {
+    fields.push({
       name: a.resultado === "reprovado" ? "Reprovado por" : "Assinado por",
       value: comEtapa(a.quem, a.etapa),
       inline: true,
-    },
-  ];
+    });
+  }
   if (a.resultado === "pendente" && a.proximo) {
     fields.push({
       name: "⏳ Aguardando",
@@ -69,6 +85,19 @@ function montarEmbed(a: AvisoAssinatura) {
     fields,
     timestamp: new Date().toISOString(),
   };
+}
+
+/** "23/10 09:30" no horário de Brasília. */
+function dataHora(d: Date) {
+  return new Intl.DateTimeFormat("pt-BR", {
+    timeZone: "America/Sao_Paulo",
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  })
+    .format(d)
+    .replace(",", "");
 }
 
 /** "🟩🟩⬜  2 de 3 assinaturas" */

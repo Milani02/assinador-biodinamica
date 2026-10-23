@@ -186,7 +186,11 @@ async function avisarDiscord(avulsoId: string, signerId: string) {
     .where(eq(profiles.id, signerId))
     .limit(1);
   const etapas = await db
-    .select({ nome: profiles.nome, status: avulsoSignatarios.status })
+    .select({
+      nome: profiles.nome,
+      status: avulsoSignatarios.status,
+      em: avulsoSignatarios.assinadoEm,
+    })
     .from(avulsoSignatarios)
     .innerJoin(profiles, eq(profiles.id, avulsoSignatarios.signerId))
     .where(eq(avulsoSignatarios.avulsoId, avulsoId))
@@ -202,5 +206,6 @@ async function avisarDiscord(avulsoId: string, signerId: string) {
       feitas: etapas.filter((e) => e.status === "assinado").length,
       total: etapas.length,
     },
+    assinaturas: etapas.map((e) => ({ nome: e.nome, em: e.em })),
   });
 }
