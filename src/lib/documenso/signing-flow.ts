@@ -4,7 +4,7 @@ import { documentVersions, documents, profiles, signatures } from "@/lib/db/sche
 import { recordAudit } from "@/lib/audit";
 import { gerarProtocoloPdf } from "@/lib/pdf/protocolo";
 import { saveProtocolFile } from "@/lib/files";
-import { md, notificarDiscord } from "@/lib/notificacoes/discord";
+import { avisarAssinatura } from "@/lib/notificacoes/discord";
 import type { PapelAssinatura } from "./client";
 
 const papelLabel: Record<PapelAssinatura, string> = {
@@ -172,8 +172,7 @@ async function avisarDiscord(
     .from(documents)
     .where(eq(documents.id, version.documentId))
     .limit(1);
-  const nomeDe = async (id: string | null) => {
-    if (!id) return "—";
+  const nomeDe = async (id: string) => {
     const [p] = await db
       .select({ nome: profiles.nome })
       .from(profiles)
@@ -182,27 +181,22 @@ async function avisarDiscord(
     return p?.nome ?? "—";
   };
 
-  const documento = `**${md(`${doc?.codigo ?? ""} – ${doc?.titulo ?? ""} (Rev. ${version.revisao})`)}**`;
-  const quem = `**${md(await nomeDe(signerId))}**`;
-  const etapa = papelLabel[papel];
+  const ordem: PapelAssinatura[] = ["elaborado", "verificado", "aprovado"];
+  const proximo =
+    resultado === "aguardando_verificacao"
+      ? { nome: await nomeDe(version.verificadorId), etapa: papelLabel.verificado }
+      : resultado === "aguardando_aprovacao"
+        ? { nome: await nomeDe(version.aprovadorId), etapa: papelLabel.aprovado }
+        : undefined;
 
-  let mensagem: string;
-  if (resultado === "reprovado") {
-    mensagem = `❌ ${quem} reprovou ${documento} na etapa de ${etapa}.`;
-    if (comentario) mensagem += `
-💬 ${md(comentario)}`;
-  } else if (resultado === "vigente") {
-    mensagem = `✍️ ${quem} assinou ${documento} (${etapa}).
-✅ Todas as assinaturas concluídas — documento vigente.`;
-  } else {
-    const proximo =
-      resultado === "aguardando_verificacao"
-        ? { id: version.verificadorId, etapa: papelLabel.verificado }
-        : { id: version.aprovadorId, etapa: papelLabel.aprovado };
-    mensagem =
-      `✍️ ${quem} assinou ${documento} (${etapa}).
-` +
-      `⏳ Pendente: **${md(await nomeDe(proximo.id))}** (${proximo.etapa})`;
-  }
-  await notificarDiscord(mensagem);
+  await avisarAssinatura({
+    resultado:
+      resultado === "reprovado" ? "reprovado" : resultado === "vigente" ? "concluido" : "pendente",
+    documento: `${doc?.codigo ?? ""} — ${doc?.titulo ?? ""} (Rev. ${version.revisao})`,
+    quem: await nomeDe(signerId),
+    etapa: papelLabel[papel],
+    proximo,
+    progresso: { feitas: ordem.indexOf(papel) + 1, total: ordem.length },
+    comentario,
+  });
 }

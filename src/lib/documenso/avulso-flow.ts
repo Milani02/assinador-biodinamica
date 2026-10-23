@@ -2,7 +2,7 @@ import { and, asc, eq } from "drizzle-orm";
 import { db } from "@/lib/db/client";
 import { avulsos, avulsoSignatarios, profiles } from "@/lib/db/schema";
 import { recordAudit } from "@/lib/audit";
-import { md, notificarDiscord } from "@/lib/notificacoes/discord";
+import { avisarAssinatura } from "@/lib/notificacoes/discord";
 import { origemDaRequisicao } from "@/lib/requisicao";
 import { createEnvelope, distributeEnvelope } from "./client";
 
@@ -185,20 +185,22 @@ async function avisarDiscord(avulsoId: string, signerId: string) {
     .from(profiles)
     .where(eq(profiles.id, signerId))
     .limit(1);
-  const [proximo] = await db
-    .select({ nome: profiles.nome })
+  const etapas = await db
+    .select({ nome: profiles.nome, status: avulsoSignatarios.status })
     .from(avulsoSignatarios)
     .innerJoin(profiles, eq(profiles.id, avulsoSignatarios.signerId))
-    .where(
-      and(eq(avulsoSignatarios.avulsoId, avulsoId), eq(avulsoSignatarios.status, "pendente")),
-    )
-    .orderBy(asc(avulsoSignatarios.ordem))
-    .limit(1);
+    .where(eq(avulsoSignatarios.avulsoId, avulsoId))
+    .orderBy(asc(avulsoSignatarios.ordem));
+  const proximo = etapas.find((e) => e.status === "pendente");
 
-  let mensagem = `✍️ **${md(quem?.nome ?? "—")}** assinou **${md(av?.titulo ?? "")}**.
-`;
-  mensagem += proximo
-    ? `⏳ Pendente: **${md(proximo.nome)}**`
-    : "✅ Todas as assinaturas concluídas.";
-  await notificarDiscord(mensagem);
+  await avisarAssinatura({
+    resultado: proximo ? "pendente" : "concluido",
+    documento: av?.titulo ?? "",
+    quem: quem?.nome ?? "—",
+    proximo: proximo ? { nome: proximo.nome } : undefined,
+    progresso: {
+      feitas: etapas.filter((e) => e.status === "assinado").length,
+      total: etapas.length,
+    },
+  });
 }
