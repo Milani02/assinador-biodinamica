@@ -1,7 +1,8 @@
 import { and, asc, eq } from "drizzle-orm";
 import { db } from "@/lib/db/client";
-import { avulsos, avulsoSignatarios } from "@/lib/db/schema";
+import { avulsos, avulsoSignatarios, profiles } from "@/lib/db/schema";
 import { recordAudit } from "@/lib/audit";
+import { md, notificarDiscord } from "@/lib/notificacoes/discord";
 import { origemDaRequisicao } from "@/lib/requisicao";
 import { createEnvelope, distributeEnvelope } from "./client";
 
@@ -120,6 +121,7 @@ export async function registrarAssinaturaAvulsaPorToken(
   });
 
   await finalizarSeCompleto(sig.avulsoId);
+  await avisarDiscord(sig.avulsoId, sig.signerId);
   return { jaRegistrado: false };
 }
 
@@ -167,5 +169,36 @@ export async function registrarAssinaturaAvulsaPorSigner(
   });
 
   await finalizarSeCompleto(avulsoId);
+  await avisarDiscord(avulsoId, signerId);
   return { jaRegistrado: false };
+}
+
+/** Avisa no canal do Discord quem assinou o avulso e quem é o próximo. */
+async function avisarDiscord(avulsoId: string, signerId: string) {
+  const [av] = await db
+    .select({ titulo: avulsos.titulo })
+    .from(avulsos)
+    .where(eq(avulsos.id, avulsoId))
+    .limit(1);
+  const [quem] = await db
+    .select({ nome: profiles.nome })
+    .from(profiles)
+    .where(eq(profiles.id, signerId))
+    .limit(1);
+  const [proximo] = await db
+    .select({ nome: profiles.nome })
+    .from(avulsoSignatarios)
+    .innerJoin(profiles, eq(profiles.id, avulsoSignatarios.signerId))
+    .where(
+      and(eq(avulsoSignatarios.avulsoId, avulsoId), eq(avulsoSignatarios.status, "pendente")),
+    )
+    .orderBy(asc(avulsoSignatarios.ordem))
+    .limit(1);
+
+  let mensagem = `✍️ **${md(quem?.nome ?? "—")}** assinou **${md(av?.titulo ?? "")}**.
+`;
+  mensagem += proximo
+    ? `⏳ Pendente: **${md(proximo.nome)}**`
+    : "✅ Todas as assinaturas concluídas.";
+  await notificarDiscord(mensagem);
 }

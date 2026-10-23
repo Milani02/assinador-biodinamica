@@ -4,6 +4,7 @@ import { documentVersions, documents, profiles, signatures } from "@/lib/db/sche
 import { recordAudit } from "@/lib/audit";
 import { gerarProtocoloPdf } from "@/lib/pdf/protocolo";
 import { saveProtocolFile } from "@/lib/files";
+import { md, notificarDiscord } from "@/lib/notificacoes/discord";
 import type { PapelAssinatura } from "./client";
 
 const papelLabel: Record<PapelAssinatura, string> = {
@@ -67,6 +68,7 @@ export async function registrarAssinatura(params: {
       metadata: { papel, comentario, sha256Hash: version.sha256Hash, origem },
     });
 
+    await avisarDiscord(version, papel, signerId, "reprovado", comentario);
     return { jaRegistrado: false };
   }
 
@@ -153,5 +155,54 @@ export async function registrarAssinatura(params: {
       .where(eq(documentVersions.id, version.id));
   }
 
+  await avisarDiscord(version, papel, signerId, novoStatus, comentario);
   return { jaRegistrado: false };
+}
+
+/** Avisa no canal do Discord quem assinou/reprovou e quem é o próximo. */
+async function avisarDiscord(
+  version: DocumentVersionRow,
+  papel: PapelAssinatura,
+  signerId: string,
+  resultado: DocumentVersionRow["status"],
+  comentario: string | null,
+) {
+  const [doc] = await db
+    .select({ codigo: documents.codigo, titulo: documents.titulo })
+    .from(documents)
+    .where(eq(documents.id, version.documentId))
+    .limit(1);
+  const nomeDe = async (id: string | null) => {
+    if (!id) return "—";
+    const [p] = await db
+      .select({ nome: profiles.nome })
+      .from(profiles)
+      .where(eq(profiles.id, id))
+      .limit(1);
+    return p?.nome ?? "—";
+  };
+
+  const documento = `**${md(`${doc?.codigo ?? ""} – ${doc?.titulo ?? ""} (Rev. ${version.revisao})`)}**`;
+  const quem = `**${md(await nomeDe(signerId))}**`;
+  const etapa = papelLabel[papel];
+
+  let mensagem: string;
+  if (resultado === "reprovado") {
+    mensagem = `❌ ${quem} reprovou ${documento} na etapa de ${etapa}.`;
+    if (comentario) mensagem += `
+💬 ${md(comentario)}`;
+  } else if (resultado === "vigente") {
+    mensagem = `✍️ ${quem} assinou ${documento} (${etapa}).
+✅ Todas as assinaturas concluídas — documento vigente.`;
+  } else {
+    const proximo =
+      resultado === "aguardando_verificacao"
+        ? { id: version.verificadorId, etapa: papelLabel.verificado }
+        : { id: version.aprovadorId, etapa: papelLabel.aprovado };
+    mensagem =
+      `✍️ ${quem} assinou ${documento} (${etapa}).
+` +
+      `⏳ Pendente: **${md(await nomeDe(proximo.id))}** (${proximo.etapa})`;
+  }
+  await notificarDiscord(mensagem);
 }
