@@ -50,6 +50,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <div className="rounded-xl bg-sidebar-accent/40 p-3.5 text-xs leading-relaxed text-sidebar-foreground/70 ring-1 ring-sidebar-border">
           Assinatura eletrônica via Documenso — sem imagem de assinatura colada no
           documento.
+          <p className="mt-2 border-t border-sidebar-border pt-2 font-mono text-[11px] text-sidebar-foreground/50">
+            Versão {process.env.APP_VERSION}
+            {process.env.APP_COMMIT ? ` · ${process.env.APP_COMMIT}` : ""}
+          </p>
         </div>
       </aside>
 
