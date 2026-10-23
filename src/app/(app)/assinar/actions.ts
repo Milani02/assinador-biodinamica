@@ -15,10 +15,12 @@ import {
 } from "@/lib/documenso/avulso-flow";
 import {
   moverCampoAssinatura,
+  definirCamposAssinatura,
   getEnvelope,
   assinarCampoComImagem,
   completarAssinaturaDocumento,
   documentIdFromSecondary,
+  type CampoAssinatura,
 } from "@/lib/documenso/client";
 import { aplicarDataNoCarimbo } from "@/lib/assinatura/carimbo";
 
@@ -45,6 +47,38 @@ function parseSize(formData: FormData): { width: number; height: number } | unde
   return { width: clamp(w, 4, 60), height: clamp(h, 1, 50) };
 }
 
+/**
+ * Lê todos os campos de assinatura escolhidos no PdfFieldPicker: o principal
+ * (`pos_assinatura_*`) e as cópias (`pos_assinatura_2_*`, `_3`…), para quem
+ * assina o documento em mais de um lugar. Limitado a 10 campos.
+ */
+function parseCampos(formData: FormData): CampoAssinatura[] {
+  const chaves = [...formData.keys()]
+    .map((k) => /^pos_(assinatura(?:_\d+)?)_x$/.exec(k)?.[1])
+    .filter((k): k is string => Boolean(k))
+    .sort((a, b) => (a === "assinatura" ? -1 : b === "assinatura" ? 1 : a.localeCompare(b, undefined, { numeric: true })))
+    .slice(0, 10);
+  return chaves.flatMap((k) => {
+    const x = Number(formData.get(`pos_${k}_x`));
+    const y = Number(formData.get(`pos_${k}_y`));
+    const page = Number(formData.get(`pos_${k}_page`));
+    if (!Number.isFinite(x) || !Number.isFinite(y) || x < 0 || x > 100 || y < 0 || y > 100) {
+      return [];
+    }
+    const w = Number(formData.get(`pos_${k}_w`));
+    const h = Number(formData.get(`pos_${k}_h`));
+    const temTamanho = Number.isFinite(w) && Number.isFinite(h) && w > 0 && h > 0;
+    return [
+      {
+        x,
+        y,
+        page: Number.isInteger(page) && page >= 1 ? page : 1,
+        ...(temTamanho ? { width: clamp(w, 4, 60), height: clamp(h, 1, 50) } : {}),
+      },
+    ];
+  });
+}
+
 // IDs dos signatários encaminhados, na ordem (campo oculto com IDs separados por vírgula).
 function parseForwardedIds(formData: FormData): string[] {
   const raw = String(formData.get("signatariosIds") || "").trim();
@@ -64,6 +98,7 @@ export async function criarAvulsoAction(
   const file = formData.get("arquivo") as File | null;
   const uploaderPos = parsePos(formData, 70, 88);
   const uploaderSize = parseSize(formData);
+  const uploaderCampos = parseCampos(formData);
   const forwardedIds = parseForwardedIds(formData);
 
   if (!titulo) return { error: "Dê um título para identificar o documento." };
@@ -161,6 +196,12 @@ export async function criarAvulsoAction(
       })),
     );
 
+    // Assinatura em mais de um lugar: troca o campo único do uploader por todos
+    // os escolhidos (o envelope é criado com um campo por signatário).
+    if (uploaderCampos.length > 1) {
+      await definirCamposAssinatura(envelopeId, 0, uploaderCampos);
+    }
+
     await recordAudit({
       entityType: "avulso",
       entityId: avulso.id,
@@ -171,6 +212,7 @@ export async function criarAvulsoAction(
         sha256Hash: saved.sha256Hash,
         envelopeId,
         signatarios: chain.map((c) => ({ ordem: c.ordem, signerId: c.signerId })),
+        camposUploader: Math.max(uploaderCampos.length, 1),
       },
     });
 
@@ -275,8 +317,7 @@ export type AssinarState = { error?: string; ok?: boolean };
  */
 export async function assinarAutomaticoAction(
   id: string,
-  pos?: { x: number; y: number; page: number },
-  size?: { width: number; height: number },
+  posicoes?: CampoAssinatura[],
 ): Promise<AssinarState> {
   const user = await requireUser();
 
@@ -309,9 +350,10 @@ export async function assinarAutomaticoAction(
   }
 
   try {
-    // Se o usuário escolheu a posição/tamanho na hora, move o campo antes de assinar.
-    if (pos) {
-      await moverCampoAssinatura(avulso.documensoEnvelopeId, atual.ordem, pos, size);
+    // Se o usuário escolheu a(s) posição(ões) na hora, recria o(s) campo(s)
+    // antes de assinar — um por lugar onde ele quer assinar.
+    if (posicoes?.length) {
+      await definirCamposAssinatura(avulso.documensoEnvelopeId, atual.ordem, posicoes);
     }
     // Descobre o(s) campo(s) SIGNATURE do destinatário desta ordem.
     const envelope = await getEnvelope(avulso.documensoEnvelopeId);
@@ -357,9 +399,7 @@ export async function assinarComPosicaoAction(
   _prevState: AssinarState,
   formData: FormData,
 ): Promise<AssinarState> {
-  const pos = parsePos(formData, 70, 88);
-  const size = parseSize(formData);
-  return assinarAutomaticoAction(id, pos, size);
+  return assinarAutomaticoAction(id, parseCampos(formData));
 }
 
 export async function marcarAvulsoAssinadoAction(id: string) {

@@ -86,22 +86,23 @@ export default async function AssinarAvulsoPage({
 
       // Assinaturas já aplicadas (quem assinou antes) — para a pessoa da vez ver
       // onde cada um assinou e escolher um lugar livre para a sua.
+      // Uma pessoa pode ter assinado em mais de um lugar: mostra todos os campos.
       assinaturasAnteriores = signatarios
         .filter((s) => s.status === "assinado")
-        .map((s) => {
+        .flatMap((s): AssinaturaAnterior[] => {
           const r = envelope.recipients.find((rr) => rr.signingOrder === s.ordem);
-          const f = r ? envelope.fields.find((ff) => ff.recipientId === r.id) : undefined;
-          if (!f) return null;
-          return {
-            nome: s.nome,
-            imagem: s.assinaturaImagem,
-            x: Number(f.positionX),
-            y: Number(f.positionY),
-            page: f.page,
-            width: Number(f.width) || 22,
-          };
-        })
-        .filter((a): a is AssinaturaAnterior => a !== null);
+          if (!r) return [];
+          return envelope.fields
+            .filter((ff) => ff.recipientId === r.id && ff.type === "SIGNATURE")
+            .map((f) => ({
+              nome: s.nome,
+              imagem: s.assinaturaImagem,
+              x: Number(f.positionX),
+              y: Number(f.positionY),
+              page: f.page,
+              width: Number(f.width) || 22,
+            }));
+        });
     } catch (err) {
       console.error("Falha ao carregar dados para ajuste de posição (avulso):", err);
     }

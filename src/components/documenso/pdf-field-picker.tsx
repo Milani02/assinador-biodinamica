@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, X } from "lucide-react";
 import { cn } from "cn";
 
 export interface PdfFieldDef {
@@ -43,6 +43,7 @@ export function PdfFieldPicker({
   defaultPositions,
   overlays = [],
   defaultWidthPct = DEFAULT_WIDTH_PCT,
+  multiple = false,
 }: {
   file: File | null;
   fields: PdfFieldDef[];
@@ -52,6 +53,11 @@ export function PdfFieldPicker({
   overlays?: PdfOverlay[];
   /** Largura (%) padrão da assinatura — igual para todos (padronização). */
   defaultWidthPct?: number;
+  /**
+   * Permite adicionar cópias do primeiro campo (ex.: assinar em dois lugares).
+   * As cópias usam as chaves `<chave>_2`, `<chave>_3`… nos campos ocultos.
+   */
+  multiple?: boolean;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -73,7 +79,42 @@ export function PdfFieldPicker({
   // Deslocamento (em %) entre o cursor e o canto do marcador ao começar a arrastar.
   const dragOffset = useRef<{ dx: number; dy: number }>({ dx: 0, dy: 0 });
 
-  const widthOf = (key: string) => widths[key] ?? defaultWidthPct;
+  // Cópias do primeiro campo adicionadas pelo usuário (modo `multiple`).
+  const [copias, setCopias] = useState<string[]>([]);
+  const base = fields[0];
+  const todos: PdfFieldDef[] = [
+    ...fields,
+    ...copias.map((key, i) => ({ ...base, key, label: `${base.label} ${i + 2}` })),
+  ];
+  /** Cópias herdam a proporção da imagem do campo original. */
+  const origemDe = (key: string) => (copias.includes(key) ? base.key : key);
+
+  const widthOf = (key: string) => widths[key] ?? widths[origemDe(key)] ?? defaultWidthPct;
+
+  function adicionarCopia() {
+    const usados = new Set(copias.map((k) => Number(k.slice(base.key.length + 1))));
+    let n = 2;
+    while (usados.has(n)) n++;
+    const key = `${base.key}_${n}`;
+    // Entra na página atual, um pouco acima da original (se estiver nela).
+    const orig = positions[base.key];
+    const y = orig && orig.page === currentPage ? orig.y - 12 : 40;
+    setCopias((prev) => [...prev, key]);
+    setPositions((prev) => ({
+      ...prev,
+      [key]: { x: orig?.x ?? 40, y: clamp(y, 0, 90), page: currentPage },
+    }));
+    setActiveKey(key);
+  }
+
+  function removerCopia(key: string) {
+    setCopias((prev) => prev.filter((k) => k !== key));
+    setPositions((prev) => {
+      const { [key]: _removida, ...resto } = prev;
+      return resto;
+    });
+    if (activeKey === key) setActiveKey(base.key);
+  }
 
   // Carrega a proporção natural de cada imagem de assinatura (para calcular a
   // altura do campo a partir da largura escolhida).
@@ -90,7 +131,7 @@ export function PdfFieldPicker({
 
   /** Altura do campo (% da página) a partir da largura, mantendo a proporção. */
   function heightPctOf(key: string) {
-    const a = aspects[key];
+    const a = aspects[key] ?? aspects[origemDe(key)];
     if (!a) return widthOf(key) * 0.28; // fallback até a imagem carregar
     return widthOf(key) * pageAspect / a;
   }
@@ -200,8 +241,8 @@ export function PdfFieldPicker({
   /** Marcadores são ancorados pelo canto superior esquerdo (igual ao Documenso),
    *  então limitamos o canto para o campo caber na página. */
   function clampTopLeft(key: string, x: number, y: number) {
-    const w = fields.find((f) => f.key === key)?.image ? widthOf(key) : 8;
-    const h = fields.find((f) => f.key === key)?.image ? heightPctOf(key) : 4;
+    const w = todos.find((f) => f.key === key)?.image ? widthOf(key) : 8;
+    const h = todos.find((f) => f.key === key)?.image ? heightPctOf(key) : 4;
     return {
       x: clamp(x, 0, Math.max(0, 100 - w)),
       y: clamp(y, 0, Math.max(0, 100 - h)),
@@ -214,7 +255,7 @@ export function PdfFieldPicker({
     if (!p || !activeKey) return;
     // Clicar posiciona a assinatura CENTRADA no cursor (mais intuitivo), mas é
     // guardada pelo canto superior esquerdo.
-    const isImg = Boolean(fields.find((f) => f.key === activeKey)?.image);
+    const isImg = Boolean(todos.find((f) => f.key === activeKey)?.image);
     const w = isImg ? widthOf(activeKey) : 0;
     const h = isImg ? heightPctOf(activeKey) : 0;
     const tl = clampTopLeft(activeKey, p.x - w / 2, p.y - h / 2);
@@ -263,22 +304,42 @@ export function PdfFieldPicker({
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap gap-2">
-        {fields.map((f) => (
-          <button
+      <div className="flex flex-wrap items-center gap-2">
+        {todos.map((f) => (
+          <span
             key={f.key}
-            type="button"
-            onClick={() => selectField(f.key)}
             className={cn(
-              "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+              "inline-flex items-center rounded-full border text-xs font-medium transition-colors",
               f.colorClass,
               activeKey === f.key ? "bg-current/10" : "opacity-60 hover:opacity-100",
             )}
           >
-            {f.label}
-            {positions[f.key]?.page ? ` (pág. ${positions[f.key].page})` : ""}
-          </button>
+            <button type="button" onClick={() => selectField(f.key)} className="px-3 py-1">
+              {f.label}
+              {positions[f.key]?.page ? ` (pág. ${positions[f.key].page})` : ""}
+            </button>
+            {copias.includes(f.key) && (
+              <button
+                type="button"
+                onClick={() => removerCopia(f.key)}
+                className="-ml-1.5 rounded-full p-1 pr-2 hover:text-destructive"
+                aria-label={`Remover ${f.label}`}
+              >
+                <X className="size-3" />
+              </button>
+            )}
+          </span>
         ))}
+        {multiple && file && status === "ready" && (
+          <button
+            type="button"
+            onClick={adicionarCopia}
+            className="inline-flex items-center gap-1 rounded-full border border-dashed px-3 py-1 text-xs font-medium text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+          >
+            <Plus className="size-3" />
+            Assinar em outro lugar
+          </button>
+        )}
       </div>
 
       {!file && (
@@ -362,7 +423,7 @@ export function PdfFieldPicker({
                 </span>
               </div>
             ))}
-          {fields.map((f) => {
+          {todos.map((f) => {
             const pos = positions[f.key];
             if (!pos || pos.page !== currentPage) return null;
             if (f.image) {
@@ -410,7 +471,7 @@ export function PdfFieldPicker({
         </div>
       )}
 
-      {fields.map((f) => (
+      {todos.map((f) => (
         <span key={f.key}>
           <input type="hidden" name={`pos_${f.key}_x`} value={positions[f.key]?.x ?? 10} />
           <input type="hidden" name={`pos_${f.key}_y`} value={positions[f.key]?.y ?? 85} />

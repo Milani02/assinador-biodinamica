@@ -76,13 +76,15 @@ function AssinarNaTela({
       <p className="text-sm text-muted-foreground">
         {overlays.length > 0
           ? "As assinaturas em verde já foram aplicadas. Arraste a SUA assinatura para um espaço livre e clique em Assinar."
-          : "Arraste a sua assinatura para o lugar certo no documento e clique em Assinar."}
+          : "Arraste a sua assinatura para o lugar certo no documento e clique em Assinar."}{" "}
+        Precisa assinar em mais de um lugar? Use &quot;Assinar em outro lugar&quot;.
       </p>
       <PdfFieldPicker
         file={file}
         fields={[{ ...CAMPOS_ASSINATURA[0], label: "Sua assinatura", image: minhaAssinatura }]}
         defaultPositions={{ assinatura: posicaoAtual ?? { x: 70, y: 88, page: 1 } }}
         overlays={overlays}
+        multiple
       />
       {state.error && <p className="text-sm text-destructive">{state.error}</p>}
       <Button type="submit" disabled={pending || !file}>

@@ -288,13 +288,14 @@ export function NovoAvulsoForm({
         <Label>Onde a sua assinatura entra no documento</Label>
         <p className="text-xs text-muted-foreground">
           {minhaAssinatura
-            ? "Arraste a sua assinatura para o lugar certo no documento. Ao enviar, ela já é aplicada e assinada. Cada pessoa encaminhada posiciona a própria na hora de assinar."
+            ? "Arraste a sua assinatura para o lugar certo no documento. Precisa assinar em mais de um lugar? Use \"Assinar em outro lugar\". Ao enviar, ela já é aplicada e assinada. Cada pessoa encaminhada posiciona a própria na hora de assinar."
             : "Clique no PDF onde a sua assinatura deve ficar. Cada pessoa encaminhada posiciona a própria assinatura na hora de assinar."}
         </p>
         <PdfFieldPicker
           file={arquivo}
           fields={[{ ...CAMPOS_ASSINATURA[0], label: "Sua assinatura", image: minhaAssinatura }]}
           defaultPositions={POSICOES_PADRAO}
+          multiple
         />
       </div>
 

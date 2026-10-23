@@ -222,15 +222,18 @@ export async function getEnvelope(envelopeId: string): Promise<EnvelopeDetails> 
   return documensoFetch(`/envelope/${envelopeId}`, { method: "GET" });
 }
 
+export interface CampoAssinatura {
+  x: number;
+  y: number;
+  page: number;
+  width?: number;
+  height?: number;
+}
+
 /**
  * Move o campo de assinatura de um signatário (identificado pela ordem de
  * assinatura) para uma nova posição/página no envelope, SEM recriar o envelope
  * — preservando as assinaturas já coletadas das etapas anteriores.
- *
- * Implementado como apagar + recriar o campo, porque o endpoint de atualização
- * (`/envelope/field/update-many`) desta versão do Documenso descarta as
- * coordenadas (só persiste o fieldMeta). Só funciona enquanto o signatário
- * daquele campo ainda não interagiu com o documento (ou seja, antes de assinar).
  */
 export async function moverCampoAssinatura(
   envelopeId: string,
@@ -238,40 +241,62 @@ export async function moverCampoAssinatura(
   pos: { x: number; y: number; page: number },
   size?: { width: number; height: number },
 ): Promise<void> {
+  await definirCamposAssinatura(envelopeId, ordem, [{ ...pos, ...size }]);
+}
+
+/**
+ * Substitui TODOS os campos de assinatura de um signatário pelos informados —
+ * permite que a mesma pessoa assine em mais de um lugar do documento.
+ *
+ * Implementado como apagar + recriar, porque o endpoint de atualização
+ * (`/envelope/field/update-many`) desta versão do Documenso descarta as
+ * coordenadas (só persiste o fieldMeta). Só funciona enquanto o signatário
+ * ainda não assinou.
+ */
+export async function definirCamposAssinatura(
+  envelopeId: string,
+  ordem: number,
+  campos: CampoAssinatura[],
+): Promise<void> {
+  if (campos.length === 0) throw new Error("Informe ao menos um campo de assinatura.");
   const envelope = await getEnvelope(envelopeId);
   const recipient = envelope.recipients.find((r) => r.signingOrder === ordem);
   if (!recipient) {
     throw new Error(`Signatário com ordem ${ordem} não encontrado no envelope.`);
   }
-  const campo = envelope.fields.find((f) => f.recipientId === recipient.id);
-  if (!campo) {
+  const atuais = envelope.fields.filter(
+    (f) => f.recipientId === recipient.id && f.type === "SIGNATURE",
+  );
+  if (atuais.length === 0) {
     throw new Error(`Campo de assinatura do signatário ordem ${ordem} não encontrado.`);
   }
+  // Sem tamanho escolhido, preserva as dimensões do campo original.
+  const largura = Number(atuais[0].width) || 25;
+  const altura = Number(atuais[0].height) || 6;
 
-  await documensoFetch("/envelope/field/delete", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ fieldId: campo.id }),
-  });
+  for (const campo of atuais) {
+    await documensoFetch("/envelope/field/delete", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ fieldId: campo.id }),
+    });
+  }
 
   await documensoFetch("/envelope/field/create-many", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       envelopeId,
-      data: [
-        {
-          recipientId: recipient.id,
-          type: "SIGNATURE",
-          fieldMeta: { type: "signature" },
-          page: pos.page,
-          positionX: pos.x,
-          positionY: pos.y,
-          // Usa o tamanho escolhido, ou preserva as dimensões do campo original.
-          width: size?.width ?? Number(campo.width) ?? 25,
-          height: size?.height ?? Number(campo.height) ?? 6,
-        },
-      ],
+      data: campos.map((c) => ({
+        recipientId: recipient.id,
+        type: "SIGNATURE",
+        fieldMeta: { type: "signature" },
+        page: c.page,
+        positionX: c.x,
+        positionY: c.y,
+        width: c.width ?? largura,
+        height: c.height ?? altura,
+      })),
     }),
   });
 }
