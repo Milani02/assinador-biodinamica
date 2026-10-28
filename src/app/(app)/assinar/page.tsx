@@ -5,7 +5,7 @@ import { ChevronRight, FileDown, PenLine } from "lucide-react";
 import { db } from "@/lib/db/client";
 import { avulsos, avulsoSignatarios, profiles } from "@/lib/db/schema";
 import { formatarDataHora } from "@/lib/datas";
-import { requireUser } from "@/lib/auth/current-user";
+import { podeBaixarDocumentos, requireUser } from "@/lib/auth/current-user";
 import { aplicarDataNoCarimbo } from "@/lib/assinatura/carimbo";
 import { NovoAvulsoForm } from "./novo-avulso-form";
 
@@ -50,7 +50,7 @@ export default async function AssinarPage() {
   // Diretoria/admin podem baixar documentos assinados que OUTROS enviaram.
   // Sem esta seção, não haveria como chegar neles (não aparecem em "enviados"
   // nem em "aguardando"). Exclui os próprios uploads (já listados abaixo).
-  const podeBaixar = user.role === "diretoria" || user.role === "admin";
+  const podeBaixar = podeBaixarDocumentos(user);
   const assinadosParaBaixar = podeBaixar
     ? await db
         .select({

@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db/client";
 import { avulsos } from "@/lib/db/schema";
-import { requireUser } from "@/lib/auth/current-user";
+import { podeBaixarDocumentos, requireUser } from "@/lib/auth/current-user";
 import { downloadSignedPdf } from "@/lib/documenso/client";
 
 export async function GET(
@@ -12,8 +12,8 @@ export async function GET(
   const user = await requireUser();
   const { id } = await params;
 
-  // Somente Diretoria (e Admin) podem baixar documentos na aba Assinar.
-  if (user.role !== "diretoria" && user.role !== "admin") {
+  // Somente Diretoria, Admin e e-mails liberados podem baixar na aba Assinar.
+  if (!podeBaixarDocumentos(user)) {
     return NextResponse.json(
       { error: "Apenas a diretoria pode baixar este documento." },
       { status: 403 },

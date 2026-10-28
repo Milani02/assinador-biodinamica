@@ -4,7 +4,7 @@ import { CheckCircle2, Clock, FileDown, Lock } from "lucide-react";
 import { db } from "@/lib/db/client";
 import { avulsos, avulsoSignatarios, profiles } from "@/lib/db/schema";
 import { formatarDataHora } from "@/lib/datas";
-import { requireUser } from "@/lib/auth/current-user";
+import { podeBaixarDocumentos, requireUser } from "@/lib/auth/current-user";
 import { aplicarDataNoCarimbo } from "@/lib/assinatura/carimbo";
 import { getAvulsoSignedUrl } from "@/lib/files";
 import { getEnvelope } from "@/lib/documenso/client";
@@ -42,7 +42,7 @@ export default async function AssinarAvulsoPage({
     .orderBy(asc(avulsoSignatarios.ordem));
 
   const isSignatario = signatarios.some((s) => s.signerId === user.id);
-  const podeBaixar = user.role === "diretoria" || user.role === "admin";
+  const podeBaixar = podeBaixarDocumentos(user);
 
   // Acesso à página: quem subiu, qualquer signatário, diretoria ou admin.
   if (avulso.uploaderId !== user.id && !isSignatario && !podeBaixar) {

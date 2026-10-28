@@ -49,3 +49,17 @@ export async function requireAdminArea() {
   if (user.role !== "admin") redirect("/assinar");
   return user;
 }
+
+/**
+ * Exceção individual à regra "só diretoria/admin baixa": e-mails liberados
+ * para baixar documentos assinados na aba Assinar sem mudar o perfil.
+ */
+const DOWNLOAD_LIBERADO = new Set(["sq@biodinamica.com.br"]); // Maira
+
+export function podeBaixarDocumentos(user: { role: string; email: string }) {
+  return (
+    user.role === "diretoria" ||
+    user.role === "admin" ||
+    DOWNLOAD_LIBERADO.has(user.email.toLowerCase())
+  );
+}
