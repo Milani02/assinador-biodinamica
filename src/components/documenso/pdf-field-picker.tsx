@@ -16,6 +16,8 @@ export interface PdfFieldDef {
 
 export type PdfFieldPositions = Record<string, { x: number; y: number; page?: number }>;
 
+export type PdfPreviewStatus = "idle" | "loading" | "ready" | "error";
+
 /** Assinatura já aplicada por quem assinou antes, mostrada sobre o documento. */
 export interface PdfOverlay {
   nome: string;
@@ -44,6 +46,7 @@ export function PdfFieldPicker({
   overlays = [],
   defaultWidthPct = DEFAULT_WIDTH_PCT,
   multiple = false,
+  onStatusChange,
 }: {
   file: File | null;
   fields: PdfFieldDef[];
@@ -58,6 +61,12 @@ export function PdfFieldPicker({
    * As cópias usam as chaves `<chave>_2`, `<chave>_3`… nos campos ocultos.
    */
   multiple?: boolean;
+  /**
+   * Avisa o formulário do estado da pré-visualização. Sem ela o usuário não vê
+   * onde a assinatura vai cair, então quem assina deve bloquear o envio até
+   * ficar "ready" (senão as posições padrão seriam usadas às cegas).
+   */
+  onStatusChange?: (status: PdfPreviewStatus) => void;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -67,7 +76,7 @@ export function PdfFieldPicker({
     ),
   );
   const [activeKey, setActiveKey] = useState(fields[0]?.key ?? "");
-  const [status, setStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
+  const [status, setStatus] = useState<PdfPreviewStatus>("idle");
   const [numPages, setNumPages] = useState(1);
   const [currentPage, setCurrentPage] = useState(1);
   // Largura (%) de cada assinatura e proporção (imgW/imgH) da imagem carregada.
@@ -180,12 +189,15 @@ export function PdfFieldPicker({
 
     (async () => {
       try {
-        const pdfjsLib = await import("pdfjs-dist");
+        // Build "legacy": o build padrão do pdf.js 6 usa APIs recentes
+        // (Map.getOrInsertComputed, Math.sumPrecise…) que o Firefox ainda não
+        // tem — lá a pré-visualização falhava. O legacy traz os polyfills.
+        const pdfjsLib = await import("pdfjs-dist/legacy/build/pdf.mjs");
         // Servido como arquivo estático em public/ (copiado de
-        // node_modules/pdfjs-dist/build/pdf.worker.min.mjs) — o padrão
+        // node_modules/pdfjs-dist/legacy/build/pdf.worker.min.mjs) — o padrão
         // `new URL(..., import.meta.url)` trava indefinidamente com o
         // Turbopack em dev, então evitamos o pipeline de assets do bundler.
-        pdfjsLib.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
+        pdfjsLib.GlobalWorkerOptions.workerSrc = "/pdf.worker.legacy.min.mjs";
 
         const buffer = await file.arrayBuffer();
         const pdf = await pdfjsLib.getDocument({ data: buffer }).promise;
@@ -208,6 +220,11 @@ export function PdfFieldPicker({
       pdfRef.current = null;
     };
   }, [file]);
+
+  useEffect(() => {
+    onStatusChange?.(status);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- avisa só quando o estado muda.
+  }, [status]);
 
   useEffect(() => {
     if (!pdfRef.current || status !== "ready") return;
@@ -352,7 +369,8 @@ export function PdfFieldPicker({
       )}
       {status === "error" && (
         <p className="text-sm text-destructive">
-          Não foi possível pré-visualizar este PDF. As posições padrão serão usadas.
+          Não foi possível pré-visualizar este PDF neste navegador. Sem a pré-visualização não dá
+          para escolher onde a assinatura entra: recarregue a página ou use o Chrome/Edge.
         </p>
       )}
 

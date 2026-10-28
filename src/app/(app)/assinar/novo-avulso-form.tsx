@@ -6,7 +6,7 @@ import { cn } from "cn";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { PdfFieldPicker } from "@/components/documenso/pdf-field-picker";
+import { PdfFieldPicker, type PdfPreviewStatus } from "@/components/documenso/pdf-field-picker";
 import { criarAvulsoAction, type AvulsoFormState } from "./actions";
 
 const initialState: AvulsoFormState = {};
@@ -161,6 +161,7 @@ export function NovoAvulsoForm({
 }) {
   const [state, formAction, pending] = useActionState(criarAvulsoAction, initialState);
   const [arquivo, setArquivo] = useState<File | null>(null);
+  const [preview, setPreview] = useState<PdfPreviewStatus>("idle");
   const [chain, setChain] = useState<Pessoa[]>([]);
 
   const disponiveis = useMemo(
@@ -296,11 +297,12 @@ export function NovoAvulsoForm({
           fields={[{ ...CAMPOS_ASSINATURA[0], label: "Sua assinatura", image: minhaAssinatura }]}
           defaultPositions={POSICOES_PADRAO}
           multiple
+          onStatusChange={setPreview}
         />
       </div>
 
       {state.error && <p className="text-sm text-destructive">{state.error}</p>}
-      <Button type="submit" disabled={pending}>
+      <Button type="submit" disabled={pending || (arquivo !== null && preview !== "ready")}>
         <Send className="size-4" />
         {pending ? "Enviando..." : minhaAssinatura ? "Enviar e assinar" : "Enviar"}
       </Button>

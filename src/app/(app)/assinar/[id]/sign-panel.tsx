@@ -5,7 +5,11 @@ import { useRouter } from "next/navigation";
 import { Move, PenLine } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EmbedSigning } from "@/components/documenso/embed-signing";
-import { PdfFieldPicker, type PdfOverlay } from "@/components/documenso/pdf-field-picker";
+import {
+  PdfFieldPicker,
+  type PdfOverlay,
+  type PdfPreviewStatus,
+} from "@/components/documenso/pdf-field-picker";
 import {
   assinarComPosicaoAction,
   marcarAvulsoAssinadoAction,
@@ -62,6 +66,7 @@ function AssinarNaTela({
   const file = usePdfFile(arquivoUrl);
   const action = assinarComPosicaoAction.bind(null, id);
   const [state, formAction, pending] = useActionState(action, initialAssinar);
+  const [preview, setPreview] = useState<PdfPreviewStatus>("idle");
 
   useEffect(() => {
     if (state.ok) onSigned();
@@ -85,9 +90,10 @@ function AssinarNaTela({
         defaultPositions={{ assinatura: posicaoAtual ?? { x: 70, y: 88, page: 1 } }}
         overlays={overlays}
         multiple
+        onStatusChange={setPreview}
       />
       {state.error && <p className="text-sm text-destructive">{state.error}</p>}
-      <Button type="submit" disabled={pending || !file}>
+      <Button type="submit" disabled={pending || preview !== "ready"}>
         <PenLine className="size-4" />
         {pending ? "Assinando..." : "Assinar aqui"}
       </Button>
@@ -114,6 +120,7 @@ function AjustarPosicao({
   const file = usePdfFile(arquivoUrl);
   const action = reposicionarAvulsoAction.bind(null, id);
   const [state, formAction, pending] = useActionState(action, initialRepos);
+  const [preview, setPreview] = useState<PdfPreviewStatus>("idle");
 
   useEffect(() => {
     if (state.ok) onSaved();
@@ -135,6 +142,7 @@ function AjustarPosicao({
         fields={CAMPOS_ASSINATURA}
         defaultPositions={{ assinatura: posicaoAtual ?? { x: 70, y: 88, page: 1 } }}
         overlays={overlays}
+        onStatusChange={setPreview}
       />
       {state.error && <p className="text-sm text-destructive">{state.error}</p>}
       {state.ok && (
@@ -142,7 +150,7 @@ function AjustarPosicao({
           Posição atualizada — a área de assinatura abaixo já reflete o novo lugar.
         </p>
       )}
-      <Button type="submit" disabled={pending || !file}>
+      <Button type="submit" disabled={pending || preview !== "ready"}>
         {pending ? "Salvando..." : "Salvar nova posição"}
       </Button>
     </form>
